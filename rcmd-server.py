@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import argparse
 import os
 import socket
 import pickle
@@ -7,7 +8,8 @@ import signal
 import sys
 
 
-PORT = 10000
+DEFAULT_HOST = 'localhost'
+DEFAULT_PORT = 10000
 HEADERSIZE = 10
 BUFSIZE = 1024
 
@@ -25,7 +27,8 @@ def recv_msg(s):
 def run_cmd(workdir, cmd, s):
     pid = os.fork()
     if pid == 0:
-        os.chdir(workdir)
+        if workdir:
+            os.chdir(workdir)
         os.close(sys.__stdin__.fileno())
         os.close(sys.__stdout__.fileno())
         os.close(sys.__stderr__.fileno())
@@ -35,11 +38,11 @@ def run_cmd(workdir, cmd, s):
         os.execvp(cmd[0], cmd)
 
 
-def run_server():
+def run_server(host, port):
     signal.signal(signal.SIGCHLD, signal.SIG_IGN)
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    s.bind(('localhost', PORT))
+    s.bind((host, port))
     s.listen()
 
     while True:
@@ -51,8 +54,18 @@ def run_server():
 
 
 if __name__ == "__main__":
-    # TODO args: --port (default 10000)
+    parser = argparse.ArgumentParser(
+        description='command server',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('-H', '--host', default=DEFAULT_HOST, help="listen host ('*' = any)")
+    parser.add_argument('-p', '--port', type=int, default=DEFAULT_PORT, help='listen port')
+    args = parser.parse_args()
+    if args.host == '*':
+        args.host = ''
     try:
-        run_server()
+        run_server(args.host, args.port)
     except KeyboardInterrupt:
         pass
+    except Exception as e:
+        print(str(e), file=sys.stderr)
+        sys.exit(1)

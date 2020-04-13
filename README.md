@@ -11,4 +11,4 @@ $ ./rcmd-exec.py echo "hello world"
 hello world
 ```
 
-TODO: Arguments to specify host, port and workdir.
+TODO: Split stdout and stderr, forward stdin, optionally allocate pseudo-tty.
