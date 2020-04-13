@@ -43,6 +43,8 @@ if __name__ == "__main__":
         args.workdir = os.getcwd()
     try:
         remote_exec(args.host, args.port, args.workdir, [args.cmd] + args.args);
+    except KeyboardInterrupt:
+        pass
     except Exception as e:
         print(str(e), file=sys.stderr)
         sys.exit(1)

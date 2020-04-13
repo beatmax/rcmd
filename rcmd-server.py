@@ -15,7 +15,6 @@ BUFSIZE = 1024
 
 
 def recv_msg(s):
-    # TODO handle disconnection
     chunk = s.recv(BUFSIZE)
     msglen = int(chunk[:HEADERSIZE])
     msg = chunk[HEADERSIZE:]
@@ -24,9 +23,10 @@ def recv_msg(s):
     return msg
 
 
-def run_cmd(workdir, cmd, s):
+def run_cmd(workdir, cmd, s, close_fds):
     pid = os.fork()
     if pid == 0:
+        close_fds()
         if workdir:
             os.chdir(workdir)
         os.close(sys.__stdin__.fileno())
@@ -45,12 +45,19 @@ def run_server(host, port):
     s.bind((host, port))
     s.listen()
 
+    def close_fds():
+        s.close()
+
     while True:
         clientsocket, address = s.accept()
-        (wd, cmd) = pickle.loads(recv_msg(clientsocket))
-        if len(cmd) > 0:
-            run_cmd(wd, cmd, clientsocket)
-        clientsocket.close()
+        try:
+            (wd, cmd) = pickle.loads(recv_msg(clientsocket))
+            if len(cmd) > 0:
+                run_cmd(wd, cmd, clientsocket, close_fds)
+        except Exception as e:
+            print('{}: {}'.format(address, e), file=sys.stderr)
+        finally:
+            clientsocket.close()
 
 
 if __name__ == "__main__":
